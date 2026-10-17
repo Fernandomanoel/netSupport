@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "console.html"
+        ],
+        "createdAt": "2026-10-17T18:34:16.606Z",
+        "reason": "false positive: dark theme (body/main background #111), scanner assumed #fff"
+      },
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "console.html"
+        ],
+        "createdAt": "2026-10-17T18:34:16.616Z",
+        "reason": "intentional: #screen img has no src until a frame streams; hidden via img:not([src]){display:none}"
+      }
+    ]
+  }
+}

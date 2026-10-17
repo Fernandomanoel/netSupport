@@ -20,6 +20,8 @@ input{width:100%;box-sizing:border-box;margin:4px 0;padding:6px;background:#2a2a
   <button id="clear">Remover bloqueios</button>
   <button id="lock">Bloquear PC</button>
   <button id="unlock">Liberar PC</button>
+  <button id="suspend">Suspender PC</button>
+  <button id="shutdown">Desligar PC</button>
 </div>
 <h3>Chamados</h3><div id="tickets"></div></aside>
 <main><img id="screen" tabindex="0" alt="Tela remota"><p id="hint">Selecione um computador na lista.</p></main>
@@ -53,6 +55,8 @@ apply.onclick = () => send({t: "block", sites: list(tools.sites.value), apps: li
 clear.onclick = () => { tools.sites.value = tools.apps.value = ""; send({t: "block", sites: [], apps: []}); };
 lock.onclick = () => send({t: "lock"});
 unlock.onclick = () => send({t: "unlock"});
+suspend.onclick = () => send({t: "suspend"});
+shutdown.onclick = () => confirm("Desligar este PC agora?") && send({t: "shutdown"});
 
 const pos = e => { const r = img.getBoundingClientRect(); return {x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height}; };
 const btn = e => ["left", "middle", "right"][e.button] || "left";
