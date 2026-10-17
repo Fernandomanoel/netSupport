@@ -1,7 +1,9 @@
 """Agente: roda (visível) no PC do usuário.
-Uso: python agent.py ws://SERVIDOR:8080 TOKEN
+Uso: python agent.py [ws://SERVIDOR:8080] [TOKEN]   (sem argumentos usa os valores embutidos abaixo)
 O usuário vê quando o suporte está olhando e só libera o controle clicando no botão (vale por sessão).
 """
+# Embutidos para o .exe abrir com duplo-clique (sem cmd). Edite antes de compilar; argumentos ainda têm prioridade.
+SERVER, TOKEN = "ws://192.168.0.10:8080", "segredo"
 import asyncio, io, json, os, socket, subprocess, sys, threading, time
 import tkinter as tk
 from tkinter import simpledialog
@@ -11,7 +13,7 @@ from PIL import Image
 
 pyautogui.PAUSE = 0
 pyautogui.FAILSAFE = False
-url, token = sys.argv[1], sys.argv[2]
+url, token = (sys.argv[1:] + [SERVER, TOKEN])[:2]  # argumentos vencem; senão usa os embutidos
 HTTP = ("https" if url.startswith("wss") else "http") + url[url.index(":"):]  # ws://h -> http://h
 HOSTS = r"C:\Windows\System32\drivers\etc\hosts" if sys.platform == "win32" else "/etc/hosts"
 MARK = "# netsupport"
