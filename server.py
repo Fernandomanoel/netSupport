@@ -83,10 +83,13 @@ async def agent_ws(r):
                 for c in list(a["watchers"]):
                     await safe(c, "send_bytes", m.data)
             elif m.type == WSMsgType.TEXT:
-                d = json.loads(m.data)
-                if d["t"] == "allow":
-                    a["allow"] = bool(d["on"])
-                elif d["t"] == "help":
+                try:
+                    d = json.loads(m.data)
+                except ValueError:
+                    continue  # frame inválido não derruba o agente
+                if d.get("t") == "allow":
+                    a["allow"] = bool(d.get("on"))
+                elif d.get("t") == "help":
                     tickets.append({"id": len(tickets) + 1, "who": a["name"], "text": str(d["text"])[:500],
                                     "ts": time.strftime("%H:%M"), "done": False})
                 await push_state()
@@ -109,20 +112,24 @@ async def console_ws(r):
         async for m in c:
             if m.type != WSMsgType.TEXT:
                 continue
-            d = json.loads(m.data)
-            if d["t"] == "watch":
+            try:
+                d = json.loads(m.data)
+            except ValueError:
+                continue  # frame inválido não derruba o console
+            t = d.get("t")
+            if t == "watch":
                 await unwatch(c)
-                a = agents.get(d["id"])
+                a = agents.get(d.get("id"))
                 if a:
                     consoles[c] = d["id"]
                     a["watchers"].add(c)
                     await safe(a["ws"], "send_json", {"t": "watch", "on": True})
-            elif d["t"] == "resolve":
-                for t in tickets:
-                    if t["id"] == d["id"]:
-                        t["done"] = True
+            elif t == "resolve":
+                for tk in tickets:
+                    if tk["id"] == d.get("id"):
+                        tk["done"] = True
                 await push_state()
-            elif d["t"] in ADMIN:  # administração: chega mesmo sem o "permitir controle"
+            elif t in ADMIN:  # administração: chega mesmo sem o "permitir controle"
                 a = agents.get(consoles[c])
                 if a:
                     await safe(a["ws"], "send_str", m.data)

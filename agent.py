@@ -102,7 +102,10 @@ async def run():
                         async for m in ws:
                             if m.type != aiohttp.WSMsgType.TEXT:
                                 continue
-                            d = json.loads(m.data)
+                            try:
+                                d = json.loads(m.data)
+                            except ValueError:
+                                continue
                             if d["t"] == "watch":
                                 st["watch"] = d["on"]
                             elif d["t"] == "lock":
