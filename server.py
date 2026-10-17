@@ -1,0 +1,117 @@
+"""Servidor: liga agentes (PCs) a consoles (navegador do técnico) e guarda chamados.
+Uso: TOKEN=segredo python server.py [porta]   ->  abrir http://SERVIDOR:PORTA/?token=segredo
+"""
+import json, os, secrets, sys, time
+from pathlib import Path
+from aiohttp import web, WSMsgType
+
+TOKEN = os.environ.get("TOKEN") or secrets.token_urlsafe(8)
+agents = {}    # id -> {ws, name, allow, watchers:set}
+consoles = {}  # ws -> id do agente observado (ou None)
+tickets = []   # {id, who, text, ts, done}
+
+
+async def safe(ws, send, *a):
+    """Peer que caiu no meio do envio não pode derrubar os outros."""
+    try:
+        await getattr(ws, send)(*a)
+    except ConnectionError:
+        pass
+
+
+def authed(r):
+    return secrets.compare_digest(r.query.get("token", ""), TOKEN)
+
+
+async def push_state():
+    msg = json.dumps({"t": "state", "tickets": tickets, "agents": [
+        {"id": i, "name": a["name"], "allow": a["allow"]} for i, a in agents.items()]})
+    for c in list(consoles):
+        await safe(c, "send_str", msg)
+
+
+async def unwatch(c):
+    a = agents.get(consoles.get(c))
+    consoles[c] = None
+    if a:
+        a["watchers"].discard(c)
+        if not a["watchers"]:
+            await safe(a["ws"], "send_json", {"t": "watch", "on": False})
+
+
+async def index(r):
+    if not authed(r):
+        raise web.HTTPForbidden()
+    return web.FileResponse(Path(__file__).with_name("console.html"))
+
+
+async def agent_ws(r):
+    if not authed(r):
+        raise web.HTTPForbidden()
+    ws = web.WebSocketResponse(max_msg_size=0)
+    await ws.prepare(r)
+    aid = secrets.token_hex(3)
+    a = agents[aid] = {"ws": ws, "name": r.query.get("name", "?")[:40], "allow": False, "watchers": set()}
+    await push_state()
+    try:
+        async for m in ws:
+            if m.type == WSMsgType.BINARY:
+                for c in list(a["watchers"]):
+                    await safe(c, "send_bytes", m.data)
+            elif m.type == WSMsgType.TEXT:
+                d = json.loads(m.data)
+                if d["t"] == "allow":
+                    a["allow"] = bool(d["on"])
+                elif d["t"] == "help":
+                    tickets.append({"id": len(tickets) + 1, "who": a["name"], "text": str(d["text"])[:500],
+                                    "ts": time.strftime("%H:%M"), "done": False})
+                await push_state()
+    finally:
+        del agents[aid]
+        for c in a["watchers"]:
+            consoles[c] = None
+        await push_state()
+    return ws
+
+
+async def console_ws(r):
+    if not authed(r):
+        raise web.HTTPForbidden()
+    c = web.WebSocketResponse()
+    await c.prepare(r)
+    consoles[c] = None
+    await push_state()
+    try:
+        async for m in c:
+            if m.type != WSMsgType.TEXT:
+                continue
+            d = json.loads(m.data)
+            if d["t"] == "watch":
+                await unwatch(c)
+                a = agents.get(d["id"])
+                if a:
+                    consoles[c] = d["id"]
+                    a["watchers"].add(c)
+                    await safe(a["ws"], "send_json", {"t": "watch", "on": True})
+            elif d["t"] == "resolve":
+                for t in tickets:
+                    if t["id"] == d["id"]:
+                        t["done"] = True
+                await push_state()
+            else:  # entrada de mouse/teclado: o agente só obedece se o usuário permitiu
+                a = agents.get(consoles[c])
+                if a and a["allow"]:
+                    await safe(a["ws"], "send_str", m.data)
+    finally:
+        await unwatch(c)
+        del consoles[c]
+    return c
+
+
+app = web.Application()
+app.add_routes([web.get("/", index), web.get("/agent", agent_ws), web.get("/console", console_ws)])
+
+if __name__ == "__main__":
+    print(f"token: {TOKEN}")
+    # shortcut: HTTP/WS sem TLS, só para rede local confiável; para internet colocar atrás de proxy HTTPS
+    web.run_app(app, port=int(sys.argv[1]) if len(sys.argv) > 1 else 8080)

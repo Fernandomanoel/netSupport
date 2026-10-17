@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Net Support</title>
+<style>
+body{margin:0;font:14px system-ui;display:flex;height:100vh;background:#111;color:#eee}
+aside{color:#eee;width:260px;padding:12px;overflow:auto;background:#1b1b1b}
+main{flex:1;display:flex;align-items:center;justify-content:center}
+img{max-width:100%;max-height:100vh;outline:none;cursor:crosshair}
+button{display:block;width:100%;margin:4px 0;padding:8px;text-align:left;background:#2a2a2a;color:#eee;border:0;border-radius:4px;cursor:pointer}
+button.on{background:#2563eb}.done{opacity:.4}h3{margin:12px 0 4px}img:not([src]){display:none}#hint{color:#d1d5db}img[src]~#hint{display:none}
+</style>
+<aside><h3>Computadores</h3><div id="agents"></div><h3>Chamados</h3><div id="tickets"></div></aside>
+<main><img id="screen" tabindex="0" alt="Tela remota"><p id="hint">Selecione um computador na lista.</p></main>
+<script>
+const q = new URLSearchParams(location.search), token = q.get("token");
+const ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/console?token=${token}`);
+const img = document.getElementById("screen"); let watching = null;
+const send = d => ws.readyState === 1 && ws.send(JSON.stringify(d));
+const el = (tag, text, cls, click) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; if (click) e.onclick = click; return e; };
+
+ws.onmessage = e => {
+  if (typeof e.data !== "string") { const old = img.src; img.src = URL.createObjectURL(e.data); if (old.startsWith("blob:")) URL.revokeObjectURL(old); return; }
+  const s = JSON.parse(e.data), A = document.getElementById("agents"), T = document.getElementById("tickets");
+  A.replaceChildren(...s.agents.map(a => el("button", `${a.name}${a.allow ? " (controle liberado)" : " (só ver)"}`, a.id === watching ? "on" : "",
+    () => { watching = a.id; send({t: "watch", id: a.id}); img.focus(); })));
+  if (!s.agents.some(a => a.id === watching)) watching = null;
+  T.replaceChildren(...s.tickets.map(t => el("button", `${t.ts} ${t.who}: ${t.text}`, t.done ? "done" : "", () => send({t: "resolve", id: t.id}))));
+};
+
+const pos = e => { const r = img.getBoundingClientRect(); return {x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height}; };
+const btn = e => ["left", "middle", "right"][e.button] || "left";
+let last = 0;
+img.onmousemove = e => { if (Date.now() - last > 40) { last = Date.now(); send({t: "move", ...pos(e)}); } };
+img.onmousedown = e => { img.focus(); send({t: "down", b: btn(e), ...pos(e)}); e.preventDefault(); };
+img.onmouseup = e => send({t: "up", b: btn(e), ...pos(e)});
+img.oncontextmenu = e => e.preventDefault();
+img.onwheel = e => { send({t: "scroll", d: e.deltaY / 40}); e.preventDefault(); };
+img.onkeydown = e => { send({t: "key", k: e.key}); e.preventDefault(); };
+img.ondragstart = e => e.preventDefault();
+</script>
