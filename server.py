@@ -9,6 +9,8 @@ TOKEN = os.environ.get("TOKEN") or secrets.token_urlsafe(8)
 agents = {}    # id -> {ws, name, allow, watchers:set}
 consoles = {}  # ws -> id do agente observado (ou None)
 tickets = []   # {id, who, text, ts, done}
+files = {}     # fid -> (nome, bytes) de um arquivo a caminho de um agente
+ADMIN = {"block", "lock", "unlock"}  # comandos à máquina administrada; não dependem do "permitir controle"
 
 
 async def safe(ws, send, *a):
@@ -43,6 +45,28 @@ async def index(r):
     if not authed(r):
         raise web.HTTPForbidden()
     return web.FileResponse(Path(__file__).with_name("console.html"))
+
+
+async def upload(r):
+    if not authed(r):
+        raise web.HTTPForbidden()
+    a = agents.get(r.query.get("id"))
+    if not a:
+        raise web.HTTPNotFound()
+    f = (await r.post())["file"]
+    fid = secrets.token_hex(8)
+    files[fid] = (f.filename, f.file.read())
+    await safe(a["ws"], "send_json", {"t": "file", "name": f.filename, "url": f"/download/{fid}"})
+    return web.Response(text="ok")
+
+
+async def download(r):
+    if not authed(r):
+        raise web.HTTPForbidden()
+    name, data = files.pop(r.match_info["fid"], (None, None))
+    if data is None:
+        raise web.HTTPNotFound()
+    return web.Response(body=data, headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 async def agent_ws(r):
@@ -98,6 +122,10 @@ async def console_ws(r):
                     if t["id"] == d["id"]:
                         t["done"] = True
                 await push_state()
+            elif d["t"] in ADMIN:  # administração: chega mesmo sem o "permitir controle"
+                a = agents.get(consoles[c])
+                if a:
+                    await safe(a["ws"], "send_str", m.data)
             else:  # entrada de mouse/teclado: o agente só obedece se o usuário permitiu
                 a = agents.get(consoles[c])
                 if a and a["allow"]:
@@ -108,8 +136,9 @@ async def console_ws(r):
     return c
 
 
-app = web.Application()
-app.add_routes([web.get("/", index), web.get("/agent", agent_ws), web.get("/console", console_ws)])
+app = web.Application(client_max_size=256 * 1024 * 1024)  # shortcut: limite de 256MB por arquivo
+app.add_routes([web.get("/", index), web.get("/agent", agent_ws), web.get("/console", console_ws),
+                web.post("/upload", upload), web.get("/download/{fid}", download)])
 
 if __name__ == "__main__":
     print(f"token: {TOKEN}")

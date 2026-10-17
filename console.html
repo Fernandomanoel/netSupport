@@ -8,8 +8,20 @@ main{flex:1;display:flex;align-items:center;justify-content:center}
 img{max-width:100%;max-height:100vh;outline:none;cursor:crosshair}
 button{display:block;width:100%;margin:4px 0;padding:8px;text-align:left;background:#2a2a2a;color:#eee;border:0;border-radius:4px;cursor:pointer}
 button.on{background:#2563eb}.done{opacity:.4}h3{margin:12px 0 4px}img:not([src]){display:none}#hint{color:#d1d5db}img[src]~#hint{display:none}
+input{width:100%;box-sizing:border-box;margin:4px 0;padding:6px;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:4px}
+#tools{border-top:1px solid #333;margin-top:12px}#tools.off{opacity:.4;pointer-events:none}
 </style>
-<aside><h3>Computadores</h3><div id="agents"></div><h3>Chamados</h3><div id="tickets"></div></aside>
+<aside><h3>Computadores</h3><div id="agents"></div>
+<div id="tools" class="off"><h3>No PC selecionado</h3>
+  <input id="file" type="file" title="Enviar arquivo">
+  <input id="sites" placeholder="sites a bloquear: ex. facebook.com, x.com">
+  <input id="apps" placeholder="apps a bloquear: ex. chrome.exe, game.exe">
+  <button id="apply">Aplicar bloqueio</button>
+  <button id="clear">Remover bloqueios</button>
+  <button id="lock">Bloquear PC</button>
+  <button id="unlock">Liberar PC</button>
+</div>
+<h3>Chamados</h3><div id="tickets"></div></aside>
 <main><img id="screen" tabindex="0" alt="Tela remota"><p id="hint">Selecione um computador na lista.</p></main>
 <script>
 const q = new URLSearchParams(location.search), token = q.get("token");
@@ -24,8 +36,23 @@ ws.onmessage = e => {
   A.replaceChildren(...s.agents.map(a => el("button", `${a.name}${a.allow ? " (controle liberado)" : " (só ver)"}`, a.id === watching ? "on" : "",
     () => { watching = a.id; send({t: "watch", id: a.id}); img.focus(); })));
   if (!s.agents.some(a => a.id === watching)) watching = null;
+  const sel = s.agents.find(a => a.id === watching);
+  tools.classList.toggle("off", !sel);
+  tools.querySelector("h3").textContent = sel ? sel.name : "No PC selecionado";
   T.replaceChildren(...s.tickets.map(t => el("button", `${t.ts} ${t.who}: ${t.text}`, t.done ? "done" : "", () => send({t: "resolve", id: t.id}))));
 };
+
+const list = v => v.split(",").map(x => x.trim()).filter(Boolean);
+tools.file.onchange = async e => {
+  const f = e.target.files[0]; if (!f || !watching) return;
+  const d = new FormData(); d.append("file", f);
+  const r = await fetch(`/upload?token=${token}&id=${watching}`, {method: "POST", body: d});
+  e.target.value = ""; alert(r.ok ? `Enviado: ${f.name}` : "Falha ao enviar");
+};
+apply.onclick = () => send({t: "block", sites: list(tools.sites.value), apps: list(tools.apps.value)});
+clear.onclick = () => { tools.sites.value = tools.apps.value = ""; send({t: "block", sites: [], apps: []}); };
+lock.onclick = () => send({t: "lock"});
+unlock.onclick = () => send({t: "unlock"});
 
 const pos = e => { const r = img.getBoundingClientRect(); return {x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height}; };
 const btn = e => ["left", "middle", "right"][e.button] || "left";
