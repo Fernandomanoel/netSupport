@@ -10,7 +10,7 @@ agents = {}    # id -> {ws, name, allow, watchers:set}
 consoles = {}  # ws -> id do agente observado (ou None)
 tickets = []   # {id, who, text, ts, done}
 files = {}     # fid -> (nome, bytes) de um arquivo a caminho de um agente
-ADMIN = {"block", "lock", "unlock"}  # comandos à máquina administrada; não dependem do "permitir controle"
+ADMIN = {"block", "lock", "unlock", "suspend", "shutdown"}  # comandos à máquina administrada; não dependem do "permitir controle"
 
 
 async def safe(ws, send, *a):

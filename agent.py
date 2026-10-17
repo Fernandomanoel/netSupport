@@ -15,6 +15,11 @@ url, token = sys.argv[1], sys.argv[2]
 HTTP = ("https" if url.startswith("wss") else "http") + url[url.index(":"):]  # ws://h -> http://h
 HOSTS = r"C:\Windows\System32\drivers\etc\hosts" if sys.platform == "win32" else "/etc/hosts"
 MARK = "# netsupport"
+WIN = sys.platform == "win32"
+POWER = {  # desligar/suspender a máquina administrada (pode exigir admin/root)
+    "shutdown": ["shutdown", "/s", "/t", "0"] if WIN else ["systemctl", "poweroff"],
+    "suspend": ["rundll32.exe", "powrprof.dll,SetSuspendState", "0,1,0"] if WIN else ["systemctl", "suspend"],
+}
 RECV = os.path.join(os.path.expanduser("~"), "netsupport_recebidos")
 st = {"watch": False, "allow": False, "ws": None, "s": None, "lock": False, "apps": set(), "note": ""}
 lockwin = None
@@ -116,6 +121,8 @@ async def run():
                                 st["apps"] = {a.lower() for a in d.get("apps", [])}
                                 if not await asyncio.to_thread(block_sites, d.get("sites", [])):
                                     st["note"] = "Bloqueio de sites exige rodar como admin/root"
+                            elif d["t"] in POWER:
+                                subprocess.Popen(POWER[d["t"]])
                             elif d["t"] == "file":
                                 asyncio.create_task(recv_file(d["name"], d["url"]))
                             else:

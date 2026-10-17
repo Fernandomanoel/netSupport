@@ -22,6 +22,8 @@ async def main():
         # administração chega mesmo com allow=False
         await c.send_json({"t": "lock"})
         assert (await asyncio.wait_for(a.receive_json(), 2)) == {"t": "lock"}
+        await c.send_json({"t": "shutdown"})
+        assert (await asyncio.wait_for(a.receive_json(), 2)) == {"t": "shutdown"}
         # envio de arquivo: upload -> agente é avisado -> download funciona
         fd = aiohttp.FormData(); fd.add_field("file", b"oi", filename="n.txt")
         assert (await s.post(f"http://127.0.0.1:8099/upload?token=t&id={aid}", data=fd)).status == 200
