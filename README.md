@@ -9,13 +9,10 @@ python agent.py ws://IP:8080 segredo      # em cada PC (precisa de tela)
 python test_server.py                     # autoteste do servidor
 ```
 
-Gerar o agente como executável instalável (um arquivo, sem janela de console):
-
-```
-pip install pyinstaller
-pyinstaller --onefile --noconsole agent.py   # saída em dist/agent (ou dist/agent.exe no Windows)
-dist/agent ws://IP:8080 segredo
-```
+Gerar o agente como `.exe` (Windows): edite `SERVER` e `TOKEN` no topo de `agent.py`,
+depois **dê duplo-clique em `build.bat`** (ou `pyinstaller --onefile --noconsole --name agent agent.py`).
+Sai `dist\agent.exe` — copie para cada PC e dê duplo-clique; sem o cmd, usa o servidor/token embutidos.
+Passo a passo completo e teste de cada função: ver `WINDOWS.md`.
 
 - O usuário vê quando o suporte está olhando a tela e só libera o controle clicando em "Permitir controle" (vale por sessão).
 - Sem TLS e com token único compartilhado: use em rede local, ou atrás de um proxy HTTPS.
