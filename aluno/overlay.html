@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>AulaCerta</title>
+<style>
+  :root{ --bg:#070c18; --ink:#eaf0fb; --muted:#aebbd6; --red:#e23140; --red-bright:#ff4d5e; --red-deep:#8f1420; }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
+    font:16px/1.5 "Segoe UI",system-ui,sans-serif; color:var(--ink); cursor:none; user-select:none; overflow:hidden;
+    background:
+      radial-gradient(1100px 760px at 50% 38%, #101d36 0%, transparent 62%),
+      radial-gradient(900px 600px at 80% 110%, #1a0e16 0%, transparent 55%),
+      var(--bg);
+  }
+  .halo{ position:relative; width:132px; height:132px; display:grid; place-items:center; }
+  .halo::before{ content:""; position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(226,49,64,.22), transparent 68%); animation:breathe 4s ease-in-out infinite; }
+  @keyframes breathe{ 0%,100%{ transform:scale(1); opacity:.8; } 50%{ transform:scale(1.12); opacity:1; } }
+  .lock{ width:86px; height:86px; border-radius:22px; display:grid; place-items:center;
+    background:linear-gradient(150deg,#1a2740,#0e1932); border:1px solid #2a3c62;
+    box-shadow:0 24px 60px -30px #000, inset 0 1px 0 rgba(255,255,255,.08); }
+  .lock svg{ width:40px; height:40px; color:var(--red-bright); }
+  .modo{ display:inline-flex; align-items:center; gap:9px; font-size:13px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--red-bright); padding:7px 16px; border:1px solid var(--red-deep); border-radius:999px; background:rgba(226,49,64,.08); }
+  h1{ margin:0; font-size:34px; font-weight:700; letter-spacing:-.03em; text-align:center; }
+  p{ margin:0; color:var(--muted); font-size:16px; max-width:520px; text-align:center; }
+  .marca{ position:fixed; bottom:30px; display:flex; align-items:center; gap:9px; color:#aebbd6; font-size:13px; letter-spacing:.01em; }
+  .marca b{ color:var(--red-bright); font-weight:700; }
+  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; } }
+</style>
+</head>
+<body>
+  <div class="halo">
+    <div class="lock">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2" stroke="currentColor" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15" r="1.4" fill="currentColor"/></svg>
+    </div>
+  </div>
+  <span class="modo" id="modo">Bloqueio</span>
+  <h1>Aula em andamento</h1>
+  <p>O professor bloqueou esta tela. Ela será liberada quando a atividade terminar.</p>
+  <div class="marca">Aula<b>Certa</b></div>
+<script>
+  const rotulo = new URLSearchParams(location.search).get("rotulo");
+  if (rotulo) document.getElementById("modo").textContent = rotulo;
+  // Dificulta sair por teclado durante a aula (nao substitui politica de dispositivo gerido).
+  addEventListener("keydown", (e) => { e.preventDefault(); }, true);
+</script>
+</body>
+</html>

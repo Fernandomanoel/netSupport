@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>AulaCerta — Aluno</title>
+<style>
+  :root{ --bg:#070c18; --surface:#0f1a30; --line:#1d2d4d; --ink:#eaf0fb; --muted:#8ea3c8; --faint:#5e7199; --red:#e23140; --red-deep:#8f1420; --azure:#4f9bff; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
+    font:15px/1.5 "Segoe UI",system-ui,sans-serif; color:var(--ink);
+    background:radial-gradient(800px 460px at 50% -10%, #0d1830, transparent 60%), var(--bg); user-select:none; }
+  .mark{ width:40px; height:40px; border-radius:11px; display:grid; place-items:center; background:linear-gradient(145deg,var(--red),var(--red-deep)); box-shadow:inset 0 1px 0 rgba(255,255,255,.22); }
+  .mark svg{ width:22px; height:22px; }
+  .conn{ display:inline-flex; align-items:center; gap:9px; font-size:14px; font-weight:650; color:var(--azure); padding:7px 14px; border:1px solid #2b4e86; border-radius:999px; background:var(--surface); }
+  .conn .d{ width:8px; height:8px; border-radius:50%; background:var(--azure); animation:pulse 2.4s ease-out infinite; }
+  @keyframes pulse{ 0%{ box-shadow:0 0 0 0 rgba(79,155,255,.5);} 70%{ box-shadow:0 0 0 7px rgba(79,155,255,0);} 100%{ box-shadow:0 0 0 0 rgba(79,155,255,0);} }
+  h1{ margin:4px 0 0; font-size:18px; font-weight:700; letter-spacing:-.02em; }
+  .det{ color:var(--muted); font-size:13.5px; font-variant-numeric:tabular-nums; }
+  .nota{ color:var(--muted); font-size:12.5px; max-width:320px; }
+</style>
+</head>
+<body>
+  <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6.5 12 3l9 3.5-9 3.5-9-3.5Z" fill="#fff" fill-opacity=".95"/><path d="M7 11.2V15c0 1.7 2.24 3 5 3s5-1.3 5-3v-3.8" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-opacity=".85"/></svg></span>
+  <span class="conn"><span class="d"></span>Conectado à sala</span>
+  <h1 id="nome">Aluno</h1>
+  <div class="det" id="url">—</div>
+  <p class="nota">Durante a aula, o professor pode bloquear esta tela. Você verá um aviso em tela cheia quando isso acontecer.</p>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.getElementById("nome").textContent = q.get("nome") || "Aluno";
+  document.getElementById("url").textContent = q.get("url") || "";
+</script>
+</body>
+</html>

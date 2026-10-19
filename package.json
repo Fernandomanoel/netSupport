@@ -1,0 +1,24 @@
+{
+  "name": "aulacerta",
+  "productName": "AulaCerta",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "author": "AulaCerta",
+  "description": "Gestao de sala de aula enxuta (Windows/LAN) - Etapa 1: conexao professor<->aluno",
+  "main": "app/main.js",
+  "scripts": {
+    "sala": "node src/room-server.js",
+    "aluno": "node src/student-agent.js",
+    "app": "electron .",
+    "empacotar": "electron-packager . AulaCerta --platform=win32 --arch=x64 --out=dist --overwrite --app-version=0.1.0 --ignore=\"dist|\\.git\"",
+    "test": "node --test --test-force-exit"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "electron": "^33.0.0"
+  }
+}
