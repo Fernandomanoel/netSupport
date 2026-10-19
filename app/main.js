@@ -3,10 +3,12 @@
 //  - Aluno: conecta na sala e exibe o overlay de bloqueio quando o professor manda.
 // O papel vem da tela de escolha (ou de --aluno/--professor na linha de comando).
 
-import { app, BrowserWindow, ipcMain, Notification, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Notification, shell, desktopCapturer } from "electron";
 import { fileURLToPath } from "node:url";
 import { dirname, join, basename } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { iniciarSala, enderecoLan } from "../src/room-server.js";
 import { conectarAluno } from "../src/student-agent.js";
 import { criarVigia } from "../src/app-guard.js";
@@ -21,6 +23,7 @@ let vigia = null; // vigia de aplicativos bloqueados
 let ultimoAviso = 0; // evita enxurrada de notificacoes
 let janelaQuiz = null; // janela de teste do aluno
 let salaHttpBase = null; // base HTTP da sala, para baixar arquivos
+let capturaTimer = null; // envio periodico da miniatura de tela
 
 function criarJanelaBase(arquivo, query = "") {
   const win = new BrowserWindow({
@@ -28,7 +31,7 @@ function criarJanelaBase(arquivo, query = "") {
     height: 560,
     resizable: false,
     title: "AulaCerta",
-    backgroundColor: "#070c18",
+    backgroundColor: "#ffffff",
     webPreferences: { preload: join(__dirname, "preload.js") },
   });
   win.setMenuBarVisibility(false);
@@ -59,7 +62,7 @@ async function iniciarProfessor() {
     minWidth: 720,
     minHeight: 480,
     title: "AulaCerta — Professor",
-    backgroundColor: "#070c18",
+    backgroundColor: "#ffffff",
   });
   janelaBase.setMenuBarVisibility(false);
   janelaBase.loadURL(`http://localhost:${port}/?ip=${encodeURIComponent(ip)}`);
@@ -73,6 +76,7 @@ function iniciarAluno({ url, nome }) {
       search: `?url=${encodeURIComponent(url)}&nome=${encodeURIComponent(nome)}`,
     });
   }
+  iniciarCaptura();
   agente = conectarAluno({
     url,
     nome,
@@ -122,7 +126,7 @@ function abrirQuiz(teste) {
       height: 660,
       minWidth: 420,
       title: "AulaCerta — Teste",
-      backgroundColor: "#070c18",
+      backgroundColor: "#ffffff",
       alwaysOnTop: true,
       webPreferences: { preload: join(__dirname, "preload.js") },
     });
@@ -169,6 +173,26 @@ function avisarBloqueioApp(imagem) {
   }).show();
 }
 
+// Captura uma miniatura da tela do aluno periodicamente e envia ao servidor.
+// Transparente: o aluno e avisado na tela de status que isso acontece durante a aula.
+function iniciarCaptura() {
+  if (capturaTimer) return;
+  const tick = async () => {
+    try {
+      const fontes = await desktopCapturer.getSources({
+        types: ["screen"],
+        thumbnailSize: { width: 320, height: 180 },
+      });
+      const img = fontes[0]?.thumbnail;
+      if (img && !img.isEmpty()) agente?.enviar("tela", { jpeg: img.toJPEG(55).toString("base64") });
+    } catch {
+      /* captura indisponivel neste ciclo */
+    }
+  };
+  tick();
+  capturaTimer = setInterval(tick, 4000);
+}
+
 function mostrarOverlay(rotulo) {
   if (!janelaOverlay) {
     janelaOverlay = new BrowserWindow({
@@ -178,7 +202,7 @@ function mostrarOverlay(rotulo) {
       alwaysOnTop: true,
       closable: false,
       minimizable: false,
-      backgroundColor: "#070c18",
+      backgroundColor: "#ffffff",
       webPreferences: {},
     });
     janelaOverlay.setAlwaysOnTop(true, "screen-saver");
@@ -198,18 +222,55 @@ function esconderOverlay() {
 
 // ---- IPC da tela de escolha ----
 ipcMain.on("escolher-papel", (_ev, payload) => {
-  if (payload?.papel === "professor") iniciarProfessor();
+  if (payload?.papel === "professor") fluxoProfessor();
   else if (payload?.papel === "aluno") iniciarAluno({ url: payload.url, nome: payload.nome });
+});
+
+// ---- Papel travado por build e senha do professor ----
+// resources/app/role.txt define o papel fixo: "professor" | "aluno". Ausente => tela de escolha.
+function papelTravado() {
+  try {
+    const r = readFileSync(join(__dirname, "..", "role.txt"), "utf8").trim().toLowerCase();
+    return r === "professor" || r === "aluno" ? r : null;
+  } catch {
+    return null;
+  }
+}
+const senhaArquivo = () => join(app.getPath("userData"), "professor.hash");
+const hashSenha = (s) => createHash("sha256").update(String(s)).digest("hex");
+
+// Professor sempre passa pela senha (define na primeira vez, depois exige).
+function fluxoProfessor() {
+  if (janelaBase && !janelaBase.isDestroyed()) janelaBase.close();
+  janelaBase = criarJanelaBase("senha.html");
+}
+
+ipcMain.handle("senha-definida", () => existsSync(senhaArquivo()));
+ipcMain.on("senha-definir", (ev, pwd) => {
+  if (!pwd || String(pwd).length < 4) { ev.sender.send("senha-erro", "A senha precisa de ao menos 4 caracteres."); return; }
+  try { writeFileSync(senhaArquivo(), hashSenha(pwd)); iniciarProfessor(); }
+  catch { ev.sender.send("senha-erro", "Não foi possível salvar a senha."); }
+});
+ipcMain.on("senha-entrar", (ev, pwd) => {
+  let ok = false;
+  try { ok = readFileSync(senhaArquivo(), "utf8") === hashSenha(pwd); } catch {}
+  if (ok) iniciarProfessor();
+  else ev.sender.send("senha-erro", "Senha incorreta.");
 });
 
 app.whenReady().then(() => {
   const argv = process.argv.slice(1);
-  if (argv.includes("--professor")) iniciarProfessor();
-  else if (argv.includes("--aluno")) criarJanelaBase("chooser.html", "papel=aluno");
+  const travado = papelTravado();
+  if (travado === "professor" || argv.includes("--professor")) fluxoProfessor();
+  else if (travado === "aluno" || argv.includes("--aluno")) janelaBase = criarJanelaBase("chooser.html", "papel=aluno&lock=1");
   else janelaBase = criarJanelaBase("chooser.html");
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0 && !agente) janelaBase = criarJanelaBase("chooser.html");
+    if (BrowserWindow.getAllWindows().length === 0 && !agente) {
+      const t = papelTravado();
+      if (t === "professor") fluxoProfessor();
+      else janelaBase = criarJanelaBase("chooser.html", t === "aluno" ? "papel=aluno&lock=1" : "");
+    }
   });
 });
 

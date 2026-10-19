@@ -8,22 +8,25 @@ Estado atual: **Etapa 1** (conexão + presença) e **Etapa 2** (bloqueio de tela
 
 ## Usar o aplicativo (.exe)
 
-O executável pronto fica em:
+São **dois executáveis separados**, cada um travado no seu papel:
 
 ```
-dist\AulaCerta-win32-x64\AulaCerta.exe
+dist\AulaCerta-Professor\AulaCerta-Professor.exe
+dist\AulaCerta-Aluno\AulaCerta-Aluno.exe
 ```
 
-- **Professor:** abra `AulaCerta.exe` e escolha **"Sou o professor"**. A sala inicia e o painel
-  abre. Anote o IP mostrado e informe aos alunos.
-- **Aluno:** em cada máquina, abra `AulaCerta.exe`, escolha **"Sou aluno"**, digite o **IP do
-  professor** e seu nome, e clique **Conectar**. Quando o professor bloquear, aparece o aviso em
-  tela cheia; ao liberar, ele some.
+- **Professor:** abra `AulaCerta-Professor.exe`. Na primeira vez, **defina uma senha**; depois
+  ela é exigida a cada abertura. Com a senha correta, a sala inicia e o painel abre com o
+  **mosaico de miniaturas** das telas dos alunos. Anote o IP mostrado e informe aos alunos.
+- **Aluno:** em cada máquina, abra `AulaCerta-Aluno.exe`, digite o **IP do professor** e seu
+  nome, e clique **Conectar**. O aluno não tem a opção de virar professor.
 
-Atalhos diretos (opcionais): `AulaCerta.exe --professor` ou `AulaCerta.exe --aluno`.
+> Transparência: o aluno é avisado de que o professor acompanha uma miniatura da tela e pode
+> bloqueá-la; o bloqueio mostra um aviso em tela cheia. Uso previsto em máquinas geridas pela
+> instituição, com o aluno ciente. Sem monitoramento oculto.
 
-> Transparência: o aluno sempre vê quando a tela está bloqueada. Uso previsto em máquinas
-> geridas pela instituição, com o aluno ciente. Sem monitoramento oculto.
+Em desenvolvimento, um único app com seletor de papel: `npm run app` (ou `--professor` /
+`--aluno`). O papel fixo vem de `resources/app/role.txt` em cada build empacotado.
 
 ## Desenvolvimento
 

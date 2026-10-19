@@ -257,3 +257,32 @@ test("upload de arquivo: aluno e avisado e consegue baixar", async () => {
 
   aluno.close(); prof.close(); await sala.close();
 });
+
+test("miniatura de tela do aluno chega ao professor", async () => {
+  const sala = await iniciarSala(0);
+  const urlWs = `ws://localhost:${sala.port}`;
+  const prof = new WebSocket(urlWs);
+  await new Promise((r) => prof.on("open", r));
+  prof.send(msg(MSG.HELLO_PROFESSOR));
+
+  const aluno = conectarAluno({ url: urlWs, nome: "Ian" });
+  await esperarMsg(prof, (m) => m.t === MSG.ROSTER && m.alunos.some((a) => a.nome === "Ian"));
+
+  const espera = esperarMsg(prof, (m) => m.t === MSG.TELA_ALUNO);
+  aluno.enviar(MSG.TELA, { jpeg: "QUFBQQ==" });
+  const m = await espera;
+  assert.equal(m.jpeg, "QUFBQQ==");
+  assert.ok(m.id);
+  // Um novo professor recebe a miniatura ja guardada ao entrar.
+  const prof2 = new WebSocket(urlWs);
+  await new Promise((r) => prof2.on("open", r));
+  const esperaRoster = esperarMsg(prof2, (x) => x.t === MSG.ROSTER);
+  const esperaTela = esperarMsg(prof2, (x) => x.t === MSG.TELA_ALUNO); // registra antes do HELLO
+  prof2.send(msg(MSG.HELLO_PROFESSOR));
+  const rosterP2 = await esperaRoster;
+  assert.ok(rosterP2.alunos.every((a) => a.tela === undefined), "roster nao carrega a imagem");
+  const telaGuardada = await esperaTela;
+  assert.equal(telaGuardada.jpeg, "QUFBQQ==", "professor novo recebe a miniatura atual");
+
+  prof2.close(); aluno.close(); prof.close(); await sala.close();
+});

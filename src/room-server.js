@@ -169,7 +169,7 @@ export function iniciarSala(porta = 0, { dataDir = join(process.cwd(), ".data") 
 
   function rosterPayload() {
     return msg(MSG.ROSTER, {
-      alunos: [...alunos.values()].map(({ sock, ...pub }) => pub),
+      alunos: [...alunos.values()].map(({ sock, tela, ...pub }) => pub),
       aula: { ...aula },
       quiz: quizPayload(),
     });
@@ -234,10 +234,21 @@ export function iniciarSala(porta = 0, { dataDir = join(process.cwd(), ".data") 
           enviadoEm: Date.now(),
         });
         transmitirRoster();
+      } else if (m.t === MSG.TELA && alunoId) {
+        const a = alunos.get(alunoId);
+        if (a && typeof m.jpeg === "string" && m.jpeg.length < 400000) {
+          a.tela = m.jpeg;
+          a.visto_em = Date.now();
+          const payload = msg(MSG.TELA_ALUNO, { id: alunoId, jpeg: m.jpeg });
+          for (const p of professores) if (p.readyState === p.OPEN) p.send(payload);
+        }
       } else if (m.t === MSG.HELLO_PROFESSOR) {
         papel = "professor";
         professores.add(sock);
         sock.send(rosterPayload());
+        // Miniaturas que ja temos, para o professor que acabou de entrar.
+        for (const a of alunos.values())
+          if (a.tela) sock.send(msg(MSG.TELA_ALUNO, { id: a.id, jpeg: a.tela }));
       } else if (m.t === MSG.LOCK && papel === "professor") {
         const modo = m.modo === "reservado" ? "reservado" : "bloqueio";
         aula.bloqueado = true;

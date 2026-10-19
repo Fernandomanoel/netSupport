@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>AulaCerta — Professor</title>
+<style>
+  :root{ --bg:#ffffff; --surface:#ffffff; --line:#e5e8ec; --line-strong:#d2d7de; --ink:#191c21; --muted:#5a6472; --faint:#949cac; --red:#d81f2a; --red-deep:#9e1620; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:28px;
+    font:15px/1.45 "Segoe UI",system-ui,sans-serif; color:var(--ink);
+    background:radial-gradient(900px 520px at 50% -12%, #fdeef0, transparent 60%), #ffffff; user-select:none; }
+  ::selection{ background:var(--red); color:#fff; }
+  .mark{ width:40px; height:40px; display:grid; place-items:center; background:linear-gradient(145deg,var(--red),var(--red-deep)); box-shadow:inset 0 1px 0 rgba(255,255,255,.22); }
+  .mark svg{ width:22px; height:22px; }
+  h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:-.02em; }
+  h1 b{ color:var(--red); }
+  p.sub{ margin:-8px 0 0; color:var(--muted); font-size:13px; text-align:center; max-width:340px; }
+  form{ display:flex; flex-direction:column; gap:12px; width:340px; }
+  label{ font-size:12.5px; color:var(--muted); display:flex; flex-direction:column; gap:5px; }
+  input{ font:14px "Segoe UI",system-ui,sans-serif; color:var(--ink); background:#fff; border:1px solid var(--line-strong); padding:10px 12px; }
+  input:focus{ outline:none; border-color:var(--red); box-shadow:0 0 0 3px rgba(216,31,42,.15); }
+  button{ font:14px/1 "Segoe UI",system-ui,sans-serif; font-weight:650; cursor:pointer; padding:11px 16px; border:1px solid var(--red-deep); background:var(--red); color:#fff; margin-top:4px; }
+  button:hover{ background:var(--red-deep); }
+  .err{ color:var(--red-deep); font-size:12.5px; min-height:16px; }
+</style>
+</head>
+<body>
+  <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="10.5" width="14" height="9.5" rx="0" stroke="#fff" stroke-width="1.8"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+  <h1>Aula<b>Certa</b> · Professor</h1>
+  <p class="sub" id="sub">Verificando…</p>
+  <form id="form">
+    <label id="l1">Senha
+      <input id="s1" type="password" autocomplete="off" />
+    </label>
+    <label id="l2" style="display:none">Confirme a senha
+      <input id="s2" type="password" autocomplete="off" />
+    </label>
+    <span class="err" id="err"></span>
+    <button type="submit" id="btn">Entrar</button>
+  </form>
+<script>
+  const sub = document.getElementById("sub");
+  const l2 = document.getElementById("l2");
+  const s1 = document.getElementById("s1");
+  const s2 = document.getElementById("s2");
+  const btn = document.getElementById("btn");
+  const err = document.getElementById("err");
+  let definindo = false;
+
+  window.aulacerta.onSenhaErro((m) => { err.textContent = m || "Erro."; });
+
+  (async () => {
+    const definida = await window.aulacerta.senhaDefinida();
+    definindo = !definida;
+    if (definindo){
+      sub.textContent = "Primeira vez: defina uma senha para proteger o painel do professor.";
+      l2.style.display = "flex"; btn.textContent = "Definir e entrar";
+    } else {
+      sub.textContent = "Digite a senha para abrir o painel do professor.";
+      btn.textContent = "Entrar";
+    }
+    s1.focus();
+  })();
+
+  document.getElementById("form").onsubmit = (e) => {
+    e.preventDefault();
+    err.textContent = "";
+    const pwd = s1.value;
+    if (definindo){
+      if (pwd.length < 4){ err.textContent = "A senha precisa de ao menos 4 caracteres."; return; }
+      if (pwd !== s2.value){ err.textContent = "As senhas não conferem."; return; }
+      window.aulacerta.senhaDefinir(pwd);
+    } else {
+      window.aulacerta.senhaEntrar(pwd);
+    }
+  };
+</script>
+</body>
+</html>

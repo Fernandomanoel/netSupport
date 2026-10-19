@@ -19,6 +19,7 @@ export const MSG = {
   SEND_LINK: "send_link", // { url } (professor -> servidor). Arquivos vao por upload HTTP.
   // aluno -> servidor
   ENVIAR_RESPOSTA: "enviar_resposta", // { testeId, respostas: [...] }
+  TELA: "tela", // { jpeg } miniatura da tela do aluno (base64)
   // servidor -> clientes
   WELCOME: "welcome", // { id }
   ROSTER: "roster", // { alunos: [...], aula: { ...bloqueio/apps, quiz } }
@@ -30,6 +31,8 @@ export const MSG = {
   REMOVER_QUIZ: "remover_quiz",
   RECEBER_LINK: "receber_link", // { url }
   RECEBER_ARQUIVO: "receber_arquivo", // { id, nome, tamanho } -> aluno baixa em /arquivo/:id
+  // servidor -> professor
+  TELA_ALUNO: "tela_aluno", // { id, jpeg } miniatura ao vivo de um aluno
 };
 
 // Modos de bloqueio: mesma funcao, rotulos distintos (ver SPEC F2).

@@ -6,4 +6,9 @@ contextBridge.exposeInMainWorld("aulacerta", {
   // Quiz do aluno
   onTeste: (cb) => ipcRenderer.on("quiz-teste", (_ev, teste) => cb(teste)),
   responder: (payload) => ipcRenderer.send("quiz-responder", payload),
+  // Senha do professor
+  senhaDefinida: () => ipcRenderer.invoke("senha-definida"),
+  senhaDefinir: (pwd) => ipcRenderer.send("senha-definir", pwd),
+  senhaEntrar: (pwd) => ipcRenderer.send("senha-entrar", pwd),
+  onSenhaErro: (cb) => ipcRenderer.on("senha-erro", (_ev, msg) => cb(msg)),
 });
