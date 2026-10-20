@@ -17,6 +17,9 @@
   h1{ margin:4px 0 0; font-size:18px; font-weight:700; letter-spacing:-.02em; }
   .det{ color:var(--muted); font-size:13.5px; font-variant-numeric:tabular-nums; }
   .nota{ color:var(--muted); font-size:12.5px; max-width:320px; }
+  .ajuda{ margin-top:6px; font:14px/1 "Segoe UI",system-ui,sans-serif; font-weight:650; cursor:pointer; padding:11px 18px; border:1px solid var(--red-deep); background:#fff; color:var(--red-deep); }
+  .ajuda:hover{ background:#fdecef; }
+  .ajuda.on{ background:var(--red); color:#fff; }
 </style>
 </head>
 <body>
@@ -25,10 +28,19 @@
   <h1 id="nome">Aluno</h1>
   <div class="det" id="url">—</div>
   <p class="nota">Durante a aula, o professor acompanha uma miniatura desta tela e pode bloqueá-la. Você verá um aviso em tela cheia quando ela for bloqueada.</p>
+  <button id="ajuda" class="ajuda">✋ Pedir ajuda</button>
 <script>
   const q = new URLSearchParams(location.search);
   document.getElementById("nome").textContent = q.get("nome") || "Aluno";
   document.getElementById("url").textContent = q.get("url") || "";
+  const bAjuda = document.getElementById("ajuda");
+  let pedindo = false;
+  bAjuda.onclick = () => {
+    pedindo = !pedindo;
+    bAjuda.classList.toggle("on", pedindo);
+    bAjuda.textContent = pedindo ? "✋ Ajuda solicitada — cancelar" : "✋ Pedir ajuda";
+    window.aulacerta.alunoAjuda(pedindo);
+  };
 </script>
 </body>
 </html>

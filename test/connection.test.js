@@ -286,3 +286,38 @@ test("miniatura de tela do aluno chega ao professor", async () => {
 
   prof2.close(); aluno.close(); prof.close(); await sala.close();
 });
+
+test("aluno pede ajuda e aparece no roster do professor", async () => {
+  const sala = await iniciarSala(0);
+  const urlWs = `ws://localhost:${sala.port}`;
+  const prof = new WebSocket(urlWs);
+  await new Promise((r) => prof.on("open", r));
+  prof.send(msg(MSG.HELLO_PROFESSOR));
+  const aluno = conectarAluno({ url: urlWs, nome: "Nina" });
+  await esperarMsg(prof, (m) => m.t === MSG.ROSTER && m.alunos.some((a) => a.nome === "Nina"));
+
+  aluno.enviar(MSG.AJUDA, { pedindo: true });
+  const r = await esperarMsg(prof, (m) => m.t === MSG.ROSTER && m.alunos.some((a) => a.nome === "Nina" && a.ajuda));
+  assert.ok(r.alunos.find((a) => a.nome === "Nina").ajuda, "ajuda marcada");
+
+  aluno.close(); prof.close(); await sala.close();
+});
+
+test("professor manda mensagem e aluno recebe", async () => {
+  const sala = await iniciarSala(0);
+  const urlWs = `ws://localhost:${sala.port}`;
+  const prof = new WebSocket(urlWs);
+  await new Promise((r) => prof.on("open", r));
+  prof.send(msg(MSG.HELLO_PROFESSOR));
+  let ultimo = null, aguardando = null;
+  const aluno = conectarAluno({ url: urlWs, nome: "Otto", onComando: (m) => { ultimo = m; aguardando?.(); } });
+  await esperarMsg(prof, (m) => m.t === MSG.ROSTER && m.alunos.some((a) => a.nome === "Otto"));
+
+  const espera = new Promise((r) => (aguardando = r));
+  prof.send(msg(MSG.MENSAGEM, { texto: "Guardem o material" }));
+  await espera;
+  assert.equal(ultimo.t, "receber_mensagem");
+  assert.equal(ultimo.texto, "Guardem o material");
+
+  aluno.close(); prof.close(); await sala.close();
+});

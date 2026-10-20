@@ -242,6 +242,9 @@ export function iniciarSala(porta = 0, { dataDir = join(process.cwd(), ".data") 
           const payload = msg(MSG.TELA_ALUNO, { id: alunoId, jpeg: m.jpeg });
           for (const p of professores) if (p.readyState === p.OPEN) p.send(payload);
         }
+      } else if (m.t === MSG.AJUDA && alunoId) {
+        const a = alunos.get(alunoId);
+        if (a) { a.ajuda = !!m.pedindo; transmitirRoster(); }
       } else if (m.t === MSG.HELLO_PROFESSOR) {
         papel = "professor";
         professores.add(sock);
@@ -289,6 +292,9 @@ export function iniciarSala(porta = 0, { dataDir = join(process.cwd(), ".data") 
       } else if (m.t === MSG.SEND_LINK && papel === "professor") {
         const url = String(m.url || "").slice(0, 2000);
         if (/^https?:\/\//i.test(url)) enviarAosAlunos(msg(MSG.RECEBER_LINK, { url }));
+      } else if (m.t === MSG.MENSAGEM && papel === "professor") {
+        const texto = String(m.texto || "").trim().slice(0, 500);
+        if (texto) enviarAosAlunos(msg(MSG.RECEBER_MENSAGEM, { texto }));
       }
     });
 

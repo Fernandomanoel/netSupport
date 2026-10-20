@@ -1,32 +1,37 @@
 # AulaCerta
 
-Gestão de sala de aula enxuta para **Windows em rede local (LAN)**. Um app, dois papéis: o
-**professor** hospeda a sala e controla; o **aluno** conecta e recebe os comandos.
-
-Estado atual: **Etapa 1** (conexão + presença) e **Etapa 2** (bloqueio de tela nos modos
-"Bloqueio" e "Reservado") concluídas. Ver [SPEC.md](SPEC.md) para o plano completo.
+Gestão de sala de aula enxuta para **Windows em rede local (LAN)**. **Um único aplicativo**
+que, na primeira execução, é configurado como **Administrador (professor)** ou **Aluno** —
+escolha definitiva no app (não há troca de papel depois).
 
 ## Usar o aplicativo (.exe)
 
-São **dois executáveis separados**, cada um travado no seu papel:
+Um executável só:
 
 ```
-dist\AulaCerta-Professor\AulaCerta-Professor.exe
-dist\AulaCerta-Aluno\AulaCerta-Aluno.exe
+dist\AulaCerta-win32-x64\AulaCerta.exe
 ```
 
-- **Professor:** abra `AulaCerta-Professor.exe`. Na primeira vez, **defina uma senha**; depois
-  ela é exigida a cada abertura. Com a senha correta, a sala inicia e o painel abre com o
-  **mosaico de miniaturas** das telas dos alunos. Anote o IP mostrado e informe aos alunos.
-- **Aluno:** em cada máquina, abra `AulaCerta-Aluno.exe`, digite o **IP do professor** e seu
-  nome, e clique **Conectar**. O aluno não tem a opção de virar professor.
+Instalar: copie a **pasta inteira** `AulaCerta-win32-x64` para onde quiser (ex.:
+`C:\Program Files\AulaCerta\`) e rode `AulaCerta.exe`.
+
+**Primeira execução (configuração):** o app pergunta o papel deste computador.
+- **Administrador (professor):** defina uma **senha**. A sala inicia e o painel abre com o
+  **mosaico de miniaturas** das telas dos alunos. A senha é exigida a cada abertura.
+- **Aluno:** o app fica fixo como aluno; a cada abertura, informe o **IP do professor** e seu
+  nome e clique **Conectar**.
+
+> A escolha do papel é **definitiva no app**. Para reconfigurar, reinstale (ou apague
+> `setup.json` na pasta de dados do app). Para implantação em massa, a TI pode colocar um
+> `resources/app/role.txt` com `professor` ou `aluno` para pular a pergunta.
+
+**Funções do professor:** bloqueio de tela (Bloqueio/Reservado), bloqueio de apps, enviar
+link/arquivo, **mensagem para a turma**, **testes/quiz** (criar, aplicar ao vivo, corrigir),
+**miniaturas ao vivo** das telas (clique para ampliar) e **✋ pedidos de ajuda** dos alunos.
 
 > Transparência: o aluno é avisado de que o professor acompanha uma miniatura da tela e pode
 > bloqueá-la; o bloqueio mostra um aviso em tela cheia. Uso previsto em máquinas geridas pela
 > instituição, com o aluno ciente. Sem monitoramento oculto.
-
-Em desenvolvimento, um único app com seletor de papel: `npm run app` (ou `--professor` /
-`--aluno`). O papel fixo vem de `resources/app/role.txt` em cada build empacotado.
 
 ## Desenvolvimento
 

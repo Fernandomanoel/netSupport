@@ -40,39 +40,18 @@
   </form>
 <script>
   const sub = document.getElementById("sub");
-  const l2 = document.getElementById("l2");
   const s1 = document.getElementById("s1");
-  const s2 = document.getElementById("s2");
-  const btn = document.getElementById("btn");
   const err = document.getElementById("err");
-  let definindo = false;
+  document.getElementById("l2").remove();
+  sub.textContent = "Digite a senha para abrir o painel do professor.";
+  s1.focus();
 
   window.aulacerta.onSenhaErro((m) => { err.textContent = m || "Erro."; });
-
-  (async () => {
-    const definida = await window.aulacerta.senhaDefinida();
-    definindo = !definida;
-    if (definindo){
-      sub.textContent = "Primeira vez: defina uma senha para proteger o painel do professor.";
-      l2.style.display = "flex"; btn.textContent = "Definir e entrar";
-    } else {
-      sub.textContent = "Digite a senha para abrir o painel do professor.";
-      btn.textContent = "Entrar";
-    }
-    s1.focus();
-  })();
 
   document.getElementById("form").onsubmit = (e) => {
     e.preventDefault();
     err.textContent = "";
-    const pwd = s1.value;
-    if (definindo){
-      if (pwd.length < 4){ err.textContent = "A senha precisa de ao menos 4 caracteres."; return; }
-      if (pwd !== s2.value){ err.textContent = "As senhas não conferem."; return; }
-      window.aulacerta.senhaDefinir(pwd);
-    } else {
-      window.aulacerta.senhaEntrar(pwd);
-    }
+    window.aulacerta.senhaEntrar(s1.value);
   };
 </script>
 </body>

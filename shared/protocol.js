@@ -17,9 +17,11 @@ export const MSG = {
   START_QUIZ: "start_quiz", // { testeId } (professor -> servidor)
   END_QUIZ: "end_quiz",
   SEND_LINK: "send_link", // { url } (professor -> servidor). Arquivos vao por upload HTTP.
+  MENSAGEM: "mensagem", // { texto } professor -> servidor -> todos os alunos
   // aluno -> servidor
   ENVIAR_RESPOSTA: "enviar_resposta", // { testeId, respostas: [...] }
   TELA: "tela", // { jpeg } miniatura da tela do aluno (base64)
+  AJUDA: "ajuda", // { pedindo: bool } aluno levanta/baixa a mao
   // servidor -> clientes
   WELCOME: "welcome", // { id }
   ROSTER: "roster", // { alunos: [...], aula: { ...bloqueio/apps, quiz } }
@@ -31,6 +33,7 @@ export const MSG = {
   REMOVER_QUIZ: "remover_quiz",
   RECEBER_LINK: "receber_link", // { url }
   RECEBER_ARQUIVO: "receber_arquivo", // { id, nome, tamanho } -> aluno baixa em /arquivo/:id
+  RECEBER_MENSAGEM: "receber_mensagem", // { texto } aviso do professor na tela do aluno
   // servidor -> professor
   TELA_ALUNO: "tela_aluno", // { id, jpeg } miniatura ao vivo de um aluno
 };

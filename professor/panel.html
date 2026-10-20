@@ -93,8 +93,9 @@
 
   main{ padding:22px 24px 40px; max-width:1040px; margin:0 auto; }
 
-  .acoes{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 18px; }
+  .acoes{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:0 0 18px; padding:10px 12px; background:var(--surface-2); border:1px solid var(--line); }
   .acoes .grp{ display:flex; gap:8px; }
+  .acoes .grp + .grp{ padding-left:14px; border-left:1px solid var(--line); }
   .acoes button{
     font:14px/1 "Segoe UI",system-ui,sans-serif; font-weight:650; letter-spacing:.005em; cursor:pointer;
     display:inline-flex; align-items:center; gap:8px; padding:10px 15px; border-radius:0;
@@ -179,6 +180,19 @@
   .quem{ min-width:0; }
   .nome{ font-weight:650; font-size:13.5px; letter-spacing:-.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .host{ color:var(--muted); font-size:11.5px; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tela{ cursor:pointer; }
+  .tela-ajuda{ position:absolute; right:0; top:0; display:none; align-items:center; gap:5px; background:var(--red); color:#fff; font-size:11px; font-weight:700; padding:4px 9px; }
+  li.ajuda .tela-ajuda{ display:inline-flex; }
+  li.ajuda{ border-color:var(--red); box-shadow:0 0 0 1px var(--red); }
+
+  .ampliar{ position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center; padding:30px;
+    background:rgba(16,24,40,.72); }
+  .ampliar.show{ display:flex; }
+  .ampliar figure{ margin:0; max-width:980px; width:100%; background:#fff; box-shadow:0 18px 40px -16px rgba(0,0,0,.55); }
+  .ampliar img{ display:block; width:100%; background:#eceef1; }
+  .ampliar figcaption{ display:flex; align-items:center; gap:10px; padding:11px 15px; border-top:1px solid var(--line); font-weight:650; }
+  .ampliar .fechar{ margin-left:auto; cursor:pointer; border:1px solid var(--line-strong); background:#fff; color:var(--muted); font-weight:650; padding:7px 13px; }
+  .ampliar .fechar:hover{ color:var(--red); border-color:var(--red); }
 
   .vazio{
     margin-top:6px; padding:46px 24px; text-align:center;
@@ -307,9 +321,18 @@
       <div class="grp envio">
         <button class="ghost" id="btn-link">Enviar link</button>
         <button class="ghost" id="btn-arquivo">Enviar arquivo</button>
+        <button class="ghost" id="btn-msg">Mensagem</button>
         <input type="file" id="file-input" hidden>
       </div>
     </nav>
+
+    <section class="editor" id="editor-msg" aria-label="Mensagem para a turma">
+      <label>Mensagem para a turma (aparece na tela de cada aluno)</label>
+      <div class="linha">
+        <input type="text" id="msg-txt" placeholder="Ex.: Guardem o material, vamos começar." style="flex:1" maxlength="500">
+        <button class="salvar" id="btn-enviar-msg">Enviar a todos</button>
+      </div>
+    </section>
 
     <section class="editor" id="editor-link" aria-label="Enviar link">
       <label>Endereço do link (começa com http:// ou https://)</label>
@@ -383,6 +406,13 @@
 
   <div class="toast" id="toast"></div>
 
+  <div class="ampliar" id="ampliar">
+    <figure>
+      <img id="ampliar-img" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+      <figcaption><span id="ampliar-nome"></span><button class="fechar" id="ampliar-fechar">Fechar</button></figcaption>
+    </figure>
+  </div>
+
 <script type="module">
   import { MSG, msg, parse } from "../shared/protocol.js";
   const estado = document.getElementById("estado");
@@ -442,12 +472,15 @@
       const li = document.createElement("li");
       li.dataset.id = a.id;
       const bloqueado = a.online && aula.bloqueado;
-      li.className = a.online ? (bloqueado ? "on bloq" : "on") : "off";
+      let cls = a.online ? (bloqueado ? "on bloq" : "on") : "off";
+      if (a.online && a.ajuda) cls += " ajuda";
+      li.className = cls;
       li.innerHTML = `
         <div class="tela">
-          <img class="tela-img" alt="">
+          <img class="tela-img" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
           <div class="tela-sem"><span>sem imagem</span></div>
           <span class="tela-tag"><span class="d"></span><span class="tag-txt"></span></span>
+          <span class="tela-ajuda">✋ Ajuda</span>
         </div>
         <div class="rodape">
           <span class="avatar"></span>
@@ -457,6 +490,7 @@
       li.querySelector(".nome").textContent = a.nome;
       li.querySelector(".host").textContent = a.host || "—";
       li.querySelector(".tag-txt").textContent = !a.online ? "Ausente" : bloqueado ? aula.rotulo : "Em aula";
+      li.querySelector(".tela").onclick = () => ampliarTela(a.id, a.nome);
       const jpeg = telas.get(a.id);
       if (jpeg && a.online){
         const img = li.querySelector(".tela-img");
@@ -475,6 +509,10 @@
     const img = li.querySelector(".tela-img");
     const sem = li.querySelector(".tela-sem");
     if (img){ img.src = "data:image/jpeg;base64," + jpeg; if (sem) sem.style.display = "none"; }
+    // Se o modal ampliado esta aberto neste aluno, atualiza ao vivo.
+    const elA = document.getElementById("ampliar");
+    if (elA.classList.contains("show") && elA.dataset.id === id)
+      document.getElementById("ampliar-img").src = "data:image/jpeg;base64," + jpeg;
   }
 
   function aplicarAula(novo){
@@ -569,6 +607,38 @@
       toast(`"${f.name}" enviado a ${d.enviados} aluno(s)`);
     }catch{ toast("falha de conexão com a sala", true); }
   };
+
+  // Mensagem para a turma
+  const editorMsg = document.getElementById("editor-msg");
+  const msgTxt = document.getElementById("msg-txt");
+  document.getElementById("btn-msg").onclick = () => {
+    const mostrar = !editorMsg.classList.contains("show");
+    editorMsg.classList.toggle("show", mostrar);
+    if (mostrar) msgTxt.focus();
+  };
+  document.getElementById("btn-enviar-msg").onclick = () => {
+    const texto = msgTxt.value.trim();
+    if (!texto){ msgTxt.focus(); return; }
+    enviar(MSG.MENSAGEM, { texto });
+    editorMsg.classList.remove("show"); msgTxt.value = "";
+    toast("Mensagem enviada à turma");
+  };
+
+  // Ampliar miniatura de um aluno
+  const elAmpliar = document.getElementById("ampliar");
+  const ampliarImg = document.getElementById("ampliar-img");
+  const ampliarNome = document.getElementById("ampliar-nome");
+  function ampliarTela(id, nome){
+    const jpeg = telas.get(id);
+    if (!jpeg){ toast("Sem imagem deste aluno ainda", true); return; }
+    ampliarImg.src = "data:image/jpeg;base64," + jpeg;
+    ampliarNome.textContent = nome;
+    elAmpliar.dataset.id = id;
+    elAmpliar.classList.add("show");
+  }
+  function fecharAmpliar(){ elAmpliar.classList.remove("show"); elAmpliar.dataset.id = ""; }
+  document.getElementById("ampliar-fechar").onclick = fecharAmpliar;
+  elAmpliar.onclick = (e) => { if (e.target === elAmpliar) fecharAmpliar(); };
 
   function setEstado(cls, txt){ estado.className = cls; estadoTxt.textContent = txt; }
 

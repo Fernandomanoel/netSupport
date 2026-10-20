@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>AulaCerta — Mensagem</title>
+<style>
+  :root{ --ink:#191c21; --muted:#5a6472; --red:#d81f2a; --red-deep:#9e1620; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; height:100vh; display:flex; flex-direction:column; color:var(--ink);
+    font:15px/1.5 "Segoe UI",system-ui,sans-serif; background:#fff; border:1px solid var(--red); user-select:none; overflow:hidden; }
+  .cab{ display:flex; align-items:center; gap:9px; padding:12px 16px; background:var(--red); color:#fff; font-weight:700; font-size:13px; letter-spacing:.03em; text-transform:uppercase; }
+  .cab .d{ width:8px; height:8px; border-radius:50%; background:#fff; }
+  .corpo{ flex:1; padding:18px 18px; overflow:auto; }
+  .texto{ font-size:17px; line-height:1.5; color:var(--ink); white-space:pre-wrap; word-break:break-word; }
+  .rod{ padding:10px 16px; border-top:1px solid #eee; display:flex; justify-content:flex-end; }
+  button{ font:14px/1 "Segoe UI",system-ui,sans-serif; font-weight:650; cursor:pointer; padding:9px 18px; border:1px solid var(--red-deep); background:var(--red); color:#fff; }
+  button:hover{ background:var(--red-deep); }
+</style>
+</head>
+<body>
+  <div class="cab"><span class="d"></span>Mensagem do professor</div>
+  <div class="corpo"><div class="texto" id="texto"></div></div>
+  <div class="rod"><button id="ok">OK</button></div>
+<script>
+  const t = new URLSearchParams(location.search).get("t") || "";
+  document.getElementById("texto").textContent = t;
+  document.getElementById("ok").onclick = () => window.close();
+  setTimeout(() => window.close(), 15000); // some sozinha apos 15s
+</script>
+</body>
+</html>

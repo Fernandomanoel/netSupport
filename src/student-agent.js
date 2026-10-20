@@ -37,7 +37,8 @@ export function conectarAluno({
         m.t === MSG.APLICAR_QUIZ ||
         m.t === MSG.REMOVER_QUIZ ||
         m.t === MSG.RECEBER_LINK ||
-        m.t === MSG.RECEBER_ARQUIVO
+        m.t === MSG.RECEBER_ARQUIVO ||
+        m.t === MSG.RECEBER_MENSAGEM
       ) {
         onComando(m);
       }

@@ -89,9 +89,27 @@ function iniciarAluno({ url, nome }) {
       else if (m.t === "remover_quiz") fecharQuiz();
       else if (m.t === "receber_link") abrirLink(m.url);
       else if (m.t === "receber_arquivo") baixarArquivo(m);
+      else if (m.t === "receber_mensagem") mostrarMensagem(m.texto);
     },
   });
 }
+
+let janelaMensagem = null;
+function mostrarMensagem(texto) {
+  if (!texto) return;
+  if (janelaMensagem && !janelaMensagem.isDestroyed()) janelaMensagem.close();
+  janelaMensagem = new BrowserWindow({
+    width: 480, height: 230, frame: false, alwaysOnTop: true, skipTaskbar: true,
+    resizable: false, backgroundColor: "#ffffff",
+    webPreferences: { preload: join(__dirname, "preload.js") },
+  });
+  janelaMensagem.setAlwaysOnTop(true, "screen-saver");
+  janelaMensagem.loadFile(join(__dirname, "mensagem.html"), { search: `?t=${encodeURIComponent(texto)}` });
+  janelaMensagem.show();
+}
+
+// Aluno levanta/baixa a mao (pedir ajuda).
+ipcMain.on("aluno-ajuda", (_ev, pedindo) => agente?.enviar("ajuda", { pedindo: !!pedindo }));
 
 function abrirLink(url) {
   if (!/^https?:\/\//i.test(url || "")) return;
@@ -220,57 +238,69 @@ function esconderOverlay() {
   if (janelaOverlay) janelaOverlay.hide();
 }
 
-// ---- IPC da tela de escolha ----
-ipcMain.on("escolher-papel", (_ev, payload) => {
-  if (payload?.papel === "professor") fluxoProfessor();
-  else if (payload?.papel === "aluno") iniciarAluno({ url: payload.url, nome: payload.nome });
-});
-
-// ---- Papel travado por build e senha do professor ----
-// resources/app/role.txt define o papel fixo: "professor" | "aluno". Ausente => tela de escolha.
-function papelTravado() {
+// ---- Configuracao inicial (papel + senha) e roteamento ----
+// setup.json em userData guarda { papel, senhaHash }. Definido uma vez na 1a execucao;
+// o app NAO oferece troca de papel depois. Para reconfigurar: reinstalar/limpar a config.
+const setupArquivo = () => join(app.getPath("userData"), "setup.json");
+const hashSenha = (s) => createHash("sha256").update(String(s)).digest("hex");
+function lerSetup() {
+  try { return JSON.parse(readFileSync(setupArquivo(), "utf8")); } catch { return null; }
+}
+// role.txt (opcional, para implantacao em massa pela TI) forca o papel.
+function papelForcado() {
   try {
     const r = readFileSync(join(__dirname, "..", "role.txt"), "utf8").trim().toLowerCase();
     return r === "professor" || r === "aluno" ? r : null;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
-const senhaArquivo = () => join(app.getPath("userData"), "professor.hash");
-const hashSenha = (s) => createHash("sha256").update(String(s)).digest("hex");
 
-// Professor sempre passa pela senha (define na primeira vez, depois exige).
+// Setup da 1a execucao: escolhe o papel e (professor) define a senha.
+ipcMain.on("setup-concluir", (ev, payload) => {
+  const papel = payload?.papel === "professor" ? "professor" : payload?.papel === "aluno" ? "aluno" : null;
+  if (!papel) return;
+  if (papel === "professor") {
+    const s = String(payload.senha || "");
+    if (s.length < 4) { ev.sender.send("setup-erro", "A senha precisa de ao menos 4 caracteres."); return; }
+    try { writeFileSync(setupArquivo(), JSON.stringify({ papel, senhaHash: hashSenha(s) })); }
+    catch { ev.sender.send("setup-erro", "Não foi possível salvar a configuração."); return; }
+    iniciarProfessor();
+  } else {
+    try { writeFileSync(setupArquivo(), JSON.stringify({ papel })); } catch {}
+    entrarAluno();
+  }
+});
+
+// Professor configurado: exige a senha a cada abertura.
 function fluxoProfessor() {
   if (janelaBase && !janelaBase.isDestroyed()) janelaBase.close();
   janelaBase = criarJanelaBase("senha.html");
 }
-
-ipcMain.handle("senha-definida", () => existsSync(senhaArquivo()));
-ipcMain.on("senha-definir", (ev, pwd) => {
-  if (!pwd || String(pwd).length < 4) { ev.sender.send("senha-erro", "A senha precisa de ao menos 4 caracteres."); return; }
-  try { writeFileSync(senhaArquivo(), hashSenha(pwd)); iniciarProfessor(); }
-  catch { ev.sender.send("senha-erro", "Não foi possível salvar a senha."); }
-});
 ipcMain.on("senha-entrar", (ev, pwd) => {
-  let ok = false;
-  try { ok = readFileSync(senhaArquivo(), "utf8") === hashSenha(pwd); } catch {}
-  if (ok) iniciarProfessor();
+  const cfg = lerSetup();
+  if (cfg?.senhaHash && cfg.senhaHash === hashSenha(pwd)) iniciarProfessor();
   else ev.sender.send("senha-erro", "Senha incorreta.");
 });
 
-app.whenReady().then(() => {
-  const argv = process.argv.slice(1);
-  const travado = papelTravado();
-  if (travado === "professor" || argv.includes("--professor")) fluxoProfessor();
-  else if (travado === "aluno" || argv.includes("--aluno")) janelaBase = criarJanelaBase("chooser.html", "papel=aluno&lock=1");
-  else janelaBase = criarJanelaBase("chooser.html");
+// Aluno: abre direto o formulario de conexao, sem opcao de virar professor.
+function entrarAluno() {
+  if (janelaBase && !janelaBase.isDestroyed()) janelaBase.close();
+  janelaBase = criarJanelaBase("chooser.html", "papel=aluno&lock=1");
+}
+ipcMain.on("escolher-papel", (_ev, payload) => {
+  if (payload?.papel === "aluno") iniciarAluno({ url: payload.url, nome: payload.nome });
+});
 
+function rotear() {
+  const papel = papelForcado() || lerSetup()?.papel || null;
+  if (papel === "professor") fluxoProfessor();
+  else if (papel === "aluno") entrarAluno();
+  else janelaBase = criarJanelaBase("setup.html"); // 1a execucao
+}
+
+app.whenReady().then(() => {
+  rotear();
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0 && !agente) {
-      const t = papelTravado();
-      if (t === "professor") fluxoProfessor();
-      else janelaBase = criarJanelaBase("chooser.html", t === "aluno" ? "papel=aluno&lock=1" : "");
-    }
+    if (BrowserWindow.getAllWindows().length === 0 && !agente) rotear();
   });
 });
 
