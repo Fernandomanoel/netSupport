@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@electron/packager": "^18.3.6",
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "png-to-ico": "^3.0.2"
   }
 }
